@@ -1,6 +1,6 @@
 <?php if (!isset($_GET['task']) || empty($_GET['task'])): ?>
     <?php die();?>
-<?php endif ?>
+<?php endif;?>
 
 <?php
 /**
@@ -26,9 +26,7 @@ class BracketsClass {
             if (!array_key_exists($s[$i], $this->brackets) && !in_array($s[$i], $this->brackets)) {
                 continue; // not a bracket
             }
-            if (in_array($s[$i], $this->brackets) || array_key_exists($s[$i], $this->brackets)) {
-                $this->expression .= $s[$i];
-            }
+            $this->expression .= $s[$i];
         }
         $this->result     = $this->checkBrackets();
         $this->expression = '';
@@ -36,25 +34,25 @@ class BracketsClass {
 
     protected function checkBrackets() {
         $result = true;
-        // echo "INPUT: {$this->expression}<br/>";
+        // echo "EXPRESSION: {$this->expression}<br/>";
         foreach ($this->brackets as $_o => $_c) {
             $count_o = substr_count($this->expression, $_o);
             $count_c = substr_count($this->expression, $_c);
             if ($count_o > $count_c) {
-                $this->errors[] = "Закрывающих скобок типа '{$_o}{$_c}' меньше открывающих.";
+                $this->errors[] = "Закрывающих скобок типа \"{$_o}{$_c}\" меньше открывающих.";
                 return false;
             }
             if ($count_o < $count_c) {
-                $this->errors[] = "Закрывающих скобок типа '{$_o}{$_c}' больше открывающих.";
+                $this->errors[] = "Закрывающих скобок типа \"{$_o}{$_c}\" больше открывающих.";
                 return false;
             }
         }
+
         $last_o = strlen($this->expression) + 1;
-        $___    = [];
         for ($i = strlen($this->expression) / 2; $i > 0; $i--) {
             $__ = [];
             foreach (array_keys($this->brackets) as $bracket) {
-                $_ = strripos($this->expression, $bracket, -(strlen($this->expression) - $last_o + 1));
+                $_ = strripos($this->expression, $bracket, ($last_o - 1) - strlen($this->expression));
                 if ($_ === FALSE) {
                     continue;
                 }
@@ -64,26 +62,22 @@ class BracketsClass {
 
             $__ = [];
             foreach (array_values($this->brackets) as $bracket) {
-                $_ = strpos($this->expression, $bracket, $last_o+1); // пофиксить.
+                $_ = strpos($this->expression, $bracket, $last_o + 1);
                 if ($_ === FALSE) {
                     continue;
                 }
-                if (in_array($_, $___)) {
-                    continue;
-                }
                 $__[] = $_;
-                // if ($this->expression == '([((({})))])') {
-                // }
             }
-            $first_c = $___[] = min($__);
+            $first_c = min($__);
 
+            // echo "Выбран ". $first_c . " из (". implode(', ', $__) .")<br/>";
             if ($this->brackets[$this->expression[$last_o]] != $this->expression[$first_c]) {
-                $this->errors[] = "Неверный символ \"{$this->expression[$first_c]}\". Возможно вы имели в виду \"{$this->brackets[$this->expression[$last_o]]}\"?";
+                $this->errors[] = "Неверный символ '{$this->expression[$first_c]}'. Возможно вы имели в виду '{$this->brackets[$this->expression[$last_o]]}'?";
                 $result         = false;
+            } else {
+                $this->matchings[]          = "PAIR: \"{$this->expression[$last_o]}{$this->expression[$first_c]}\" {$last_o} AND {$first_c}";
+                $this->expression[$first_c] = '*'; // Ставим маску на валидную закрывающую скобку, чтобы не попадать на одну и ту же в следующей итерации при поиске ближайшей закрывающей. При этом сохраняем позиционирование для отчёта.
             }
-            // else {
-            $this->matchings[] = "PAIR: \"{$this->expression[$last_o]}{$this->expression[$first_c]}\" {$last_o} AND {$first_c}";
-            // }
         }
 
         return $result;
@@ -115,24 +109,25 @@ class BracketsClass {
 
 <?php if ($_GET['task'] == 1): ?>
     <?php $input = [
-        "(a+b)^[c:i]",
-        "[b*(d-d)-a-c]+{b*[d-d]-a-c}",
-        "[b*(d-d)-a-c]",
-        "{b*[d-d]-a-c}",
-        "(a+b)*c",
-        "(a*b+{x*(2*c)})",
-        "([((({})))])",
-        "a*b+{x*(2*c)}",
-        "a*c*(a+b^[x*y])",
-        "[({})]",
-        "=================MISTAKES=================",
-        "(a*c*(a+b^(x*y))",
-        "[b*(d]-d)-a-c",
-        "a*c*(a+b^{ (x*y} })",
-        "a*b+{x*2)*{c)",
-        "[([)",
+    "=================(CORRECT)=================",
+    "(a+b)^[c:i]",
+    "[b*(d-d)-a-c]+{b*[d-d]-a-c}",
+    "[b*(d-d)-a-c]",
+    "{b*[d-d]-a-c}",
+    "(a+b)*c",
+    "(a*b+{x*(2*c)})",
+    "([((({})))])",
+    "a*b+{x*(2*c)}",
+    "a*c*(a+b^[x*y])",
+    "[({})]",
+    "=================[INVALID)=================",
+    "(a*c*(a+b^(x*y))",
+    "[b*(d]-d)-a-c",
+    "a*c*(a+b^{ (x*y} })",
+    "a*b+{x*2)*{c)",
+    "[([)",
 
-    ];?>
+];?>
     <?php foreach ($input as $s): ?>
         <?php
             $_ = new BracketsClass;
@@ -140,9 +135,9 @@ class BracketsClass {
         ?>
         <span class="input"><?=$s;?></span>
         <div class="results">
-            <div class="result"><?=$_->getMatchings();?></div>
+            <!-- <div class="result"><?=$_->getMatchings();?></div> -->
             <div class="summary"><?=$_->getResult();?></div>
-            <div class="errors"><?=$_->getErrors();?></div>
+            <!-- <div class="errors"><?=$_->getErrors();?></div> -->
             <!-- <div class="debug-wrapper"><?=$_->getDebugInfo();?></div> -->
         </div>
         <hr>
@@ -163,11 +158,11 @@ $db = new mysqli($host, $user, $pass, $db);
 if ($db->connect_errno) {
     echo $db->connect_error;
 }
-if(!$db->query("CREATE TABLE IF NOT EXISTS `tz2` (id int NOT NULL, name text)")) {
+if (!$db->query("CREATE TABLE IF NOT EXISTS `tz2` (id int NOT NULL, name text)")) {
     echo $db->error;
 }
 
-if(!$db->query("TRUNCATE TABLE `tz2`;")) {
+if (!$db->query("TRUNCATE TABLE `tz2`;")) {
     echo $db->error;
 }
 $sql = "INSERT INTO `tz2` (id, name) VALUES
@@ -201,7 +196,7 @@ $sql = "INSERT INTO `tz2` (id, name) VALUES
     ('1', 'Яранск — Россия'),
     ('1', 'Ярославль — Россия')
 ";
-if(!$db->query($sql)) {
+if (!$db->query($sql)) {
     echo $db->error;
 }
 
@@ -215,10 +210,10 @@ WHERE `id` IN (
     HAVING count(*)>1
 )";
 
-if(!$res = $db->query($sql)) {
+if (!$res = $db->query($sql)) {
     echo $db->error;
 }
 var_dump($res->fetch_all()); // <------ Неуникальные значения здесь.
 ?>
 
-<?php endif ?>
+<?php endif;?>
